@@ -49,7 +49,7 @@ async function addFormDataToSheet(formData) {
         const googleSheets = google.sheets({ version: "v4", auth: client });
 
         const spreadsheetId = process.env.SPREADSHEET_ID;
-        const range = `${process.env.SHEET_NAME}!A2:I`;
+        const range = `${process.env.SHEET_NAME}!G13:N`;
 
         // Преобразование данных формы с учетом keywords.json
         if (formData.url) {
