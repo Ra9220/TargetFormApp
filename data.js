@@ -2,6 +2,7 @@ function loadData() {
     fetch('data.json')
         .then(response => response.json())
         .then(data => {
+            initializeSelect('responsible', data.responsibles);
             initializeSelect('region', data.regions);
             initializeSelect('format', data.formats);
             initializeSelect('topic', data.topics);
@@ -39,6 +40,7 @@ function closePopup() {
 function submitForm() {
     const form = document.getElementById('dataForm');
     const formData = {
+        responsible: form.responsible.value,
         vp: form.vp.checked ? 'ВП' : '', // Если чек-бокс "ВП" отмечен, то значение "ВП", иначе пустая строка
         region: form.region.value,
         url: form.url.value,

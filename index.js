@@ -11,8 +11,9 @@ const app = express();
 app.use(bodyParser.json());
 app.use(morgan('combined'));
 
-// Загружаем keywords.json
+// Загружаем keywords.json и responsible.json
 const keywordsData = JSON.parse(fs.readFileSync('keywords.json', 'utf8')); // Изменено на динамическую загрузку
+const responsibleData = JSON.parse(fs.readFileSync('responsible.json', 'utf8')); // Добавлено для загрузки responsible.json
 
 app.get('/styles.css', (req, res) => {
     res.sendFile(path.join(__dirname, 'styles.css'), {
@@ -38,43 +39,14 @@ app.get('/data.json', (req, res) => {
     });
 });
 
-// async function addFormDataToSheet(formData) {
-//     try {
-//         const auth = new google.auth.GoogleAuth({
-//             keyFile: "credentials.json",
-//             scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-//         });
-//
-//         const client = await auth.getClient();
-//         const googleSheets = google.sheets({ version: "v4", auth: client });
-//
-//         const spreadsheetId = process.env.SPREADSHEET_ID;
-//         const range = `${process.env.SHEET_NAME}!G13:N`;
-//
-//         // Преобразование данных формы с учетом keywords.json
-//         if (formData.url) {
-//             const keywordEntry = keywordsData.keywords.find(entry => formData.url.includes(entry.keyword));
-//             if (keywordEntry) {
-//                 formData.region = keywordEntry.region; // Обновляем регион на основе найденного совпадения
-//             }
-//         }
-//
-//         await googleSheets.spreadsheets.values.append({
-//             spreadsheetId,
-//             range,
-//             valueInputOption: "USER_ENTERED",
-//             resource: { values: [Object.values(formData)] },
-//         });
-//
-//         console.log('Data successfully added to Google Sheets:', formData);
-//     } catch (error) {
-//         console.error('Error adding data to Google Sheets:', error);
-//         throw error;
-//     }
-// }
-
 async function addFormDataToSheet(formData) {
     try {
+        // Загружаем данные из файлов keywords.json и responsible.json
+        const keywordsData = JSON.parse(fs.readFileSync('keywords.json', 'utf8'));
+        const responsibleData = JSON.parse(fs.readFileSync('responsible.json', 'utf8'));
+
+        console.log('Loaded responsibleData:', responsibleData); // Добавлено для отладки
+
         const auth = new google.auth.GoogleAuth({
             keyFile: "credentials.json",
             scopes: ["https://www.googleapis.com/auth/spreadsheets"],
@@ -84,30 +56,31 @@ async function addFormDataToSheet(formData) {
         const googleSheets = google.sheets({ version: "v4", auth: client });
 
         const spreadsheetId = process.env.SPREADSHEET_ID;
-
-        // Получаем текущее содержимое столбца G, чтобы определить, с какой строки начинать добавление данных
-        const response = await googleSheets.spreadsheets.values.get({
-            spreadsheetId,
-            range: `${process.env.SHEET_NAME}!G:G`,
-        });
-        const values = response.data.values;
-        const startRow = values ? values.length + 1 : 2; // Начинать с следующей строки после последней заполненной
-
-        const range = `${process.env.SHEET_NAME}!G${startRow}:N${startRow}`;
+        const range = `${process.env.SHEET_NAME}!A2:I`;
 
         // Преобразование данных формы с учетом keywords.json
         if (formData.url) {
             const keywordEntry = keywordsData.keywords.find(entry => formData.url.includes(entry.keyword));
             if (keywordEntry) {
-                formData.region = keywordEntry.region; // Обновляем регион на основе найденного совпадения
+                // Обновляем регион на основе найденного совпадения из keywords.json
+                formData.region = keywordEntry.region;
+            }
+
+            // Обновление значения столбца "responsible" на основе responsible.json
+            const responsibleEntry = responsibleData.responsible.find(entry => formData.url.includes(entry.keyword));
+            console.log('Found responsibleEntry:', responsibleEntry); // Добавлено для отладки
+            if (responsibleEntry) {
+                formData.responsible = responsibleEntry.value;
             }
         }
+
+        console.log('Final formData:', formData); // Добавлено для отладки
 
         await googleSheets.spreadsheets.values.append({
             spreadsheetId,
             range,
             valueInputOption: "USER_ENTERED",
-            resource: { values: [Object.values(formData)] },
+            resource: { values: [[formData.responsible, formData.vp, formData.region, formData.url, formData.format, formData.topic, formData.date, formData.content]] },
         });
 
         console.log('Data successfully added to Google Sheets:', formData);
